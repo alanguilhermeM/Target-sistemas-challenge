@@ -20,4 +20,18 @@ public class ComissaoService
             return 0;
         });
     }
+
+    public List<ResultadoComissao> Calcular(List<Venda> vendas)
+    {
+        var vendedoresAgrupados = AgruparPorVendedor(vendas);
+        var resultados = vendedoresAgrupados.Select(grupo =>
+        {
+            return new ResultadoComissao
+            {
+                Vendedor = grupo.Key,
+                TotalComissao = CalcularComissao(grupo)
+            };
+        });
+        return resultados.ToList();
+    }
 }

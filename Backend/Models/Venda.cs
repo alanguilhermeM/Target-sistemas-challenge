@@ -12,6 +12,5 @@ public class VendasRequest
 public class ResultadoComissao
 {
     public string Vendedor { get; set; }
-    public decimal TotalVendas { get; set; }
     public decimal TotalComissao { get; set; }
 }
