@@ -1,0 +1,315 @@
+# Desafio Técnico - Target Sistemas
+
+Solução desenvolvida para o desafio técnico do processo seletivo da **Target Sistemas**.
+
+O projeto consiste em uma API REST desenvolvida em **C# com ASP.NET Core**, contendo três desafios relacionados a regras de negócio comuns em sistemas comerciais.
+
+## Tecnologias utilizadas
+
+* C#
+* .NET 10
+* ASP.NET Core Web API
+* LINQ
+* JSON
+* Git
+
+## Estrutura do projeto
+
+```text
+DesafioTecnico/
+├── Backend/
+│   ├── Controllers/
+│   │   ├── ComissaoController.cs
+│   │   ├── EstoqueController.cs
+│   │   └── JurosController.cs
+│   │
+│   ├── Models/
+│   │   ├── Venda.cs
+│   │   ├── ResultadoComissao.cs
+│   │   ├── MovimentacaoEstoque.cs
+│   │   ├── ProdutoEstoque.cs
+│   │   ├── CalculoJurosRequest.cs
+│   │   └── CalculoJurosResponse.cs
+│   │
+│   ├── Services/
+│   │   ├── ComissaoService.cs
+│   │   ├── EstoqueService.cs
+│   │   └── JurosService.cs
+│   │
+│   ├── Data/
+│   │   ├── vendas.json
+│   │   └── estoque.json
+│   │
+│   ├── Program.cs
+│   └── Backend.csproj
+│
+└── DesafioTecnico.slnx
+```
+
+## Como executar
+
+### Pré-requisitos
+
+* .NET 10 SDK
+* Git
+
+Verifique a versão instalada:
+
+```bash
+dotnet --version
+```
+
+### Executando a aplicação
+
+Entre na pasta do backend:
+
+```bash
+cd Backend
+```
+
+Execute a aplicação:
+
+```bash
+dotnet run
+```
+
+A API será disponibilizada no endereço informado pelo terminal, por exemplo:
+
+```text
+http://localhost:5244
+```
+
+Os endpoints podem ser testados utilizando ferramentas como **Insomnia**, **Postman** ou qualquer cliente HTTP.
+
+---
+
+# Desafio 1 - Cálculo de comissão
+
+Endpoint:
+
+```http
+POST /api/comissao
+```
+
+O endpoint recebe uma lista de vendas e calcula a comissão de cada vendedor de acordo com as seguintes regras:
+
+| Valor da venda             | Comissão |
+| -------------------------- | -------: |
+| Menor que R$ 100,00        |       0% |
+| De R$ 100,00 até R$ 499,99 |       1% |
+| A partir de R$ 500,00      |       5% |
+
+A comissão é calculada individualmente para cada venda e posteriormente agrupada por vendedor.
+
+### Exemplo de requisição
+
+```json
+[
+  {
+    "vendedor": "João Silva",
+    "valor": 1200.50
+  },
+  {
+    "vendedor": "João Silva",
+    "valor": 950.75
+  },
+  {
+    "vendedor": "Maria Souza",
+    "valor": 2100.40
+  }
+]
+```
+
+### Exemplo de resposta
+
+```json
+[
+  {
+    "vendedor": "João Silva",
+    "totalComissao": 107.5625
+  },
+  {
+    "vendedor": "Maria Souza",
+    "totalComissao": 105.0200
+  }
+]
+```
+
+---
+
+# Desafio 2 - Movimentação de estoque
+
+Endpoint:
+
+```http
+POST /api/estoque
+```
+
+O endpoint permite realizar movimentações de entrada e saída dos produtos cadastrados no arquivo `Data/estoque.json`.
+
+Cada movimentação possui:
+
+* identificador;
+* código do produto;
+* tipo da movimentação;
+* quantidade;
+* descrição.
+
+### Exemplo de requisição
+
+```json
+{
+  "movimentacaoId": 1,
+  "codigoProduto": 101,
+  "tipo": "Entrada",
+  "quantidade": 20,
+  "descricao": "Compra de mercadoria"
+}
+```
+
+O estoque atual é carregado do arquivo JSON, a movimentação é realizada e o estoque atualizado é persistido no mesmo arquivo.
+
+### Regras
+
+* `Entrada` adiciona a quantidade ao estoque.
+* `Saída` subtrai a quantidade do estoque.
+* Não é permitida uma saída maior que o estoque disponível.
+* O código do produto deve existir no estoque.
+* O tipo de movimentação deve ser válido.
+
+### Respostas HTTP
+
+| Situação                      |            Status |
+| ----------------------------- | ----------------: |
+| Movimentação realizada        |          `200 OK` |
+| Produto não encontrado        |   `404 Not Found` |
+| Estoque insuficiente          | `400 Bad Request` |
+| Tipo de movimentação inválido | `400 Bad Request` |
+
+### Exemplo de resposta
+
+```json
+170
+```
+
+Nesse exemplo, o produto possuía inicialmente 150 unidades e foi realizada uma entrada de 20 unidades.
+
+---
+
+# Desafio 3 - Cálculo de juros
+
+Endpoint:
+
+```http
+POST /api/juros
+```
+
+O endpoint recebe um valor e uma data de vencimento e calcula os juros considerando a data atual.
+
+A taxa definida pelo desafio é de **2,5% ao dia**.
+
+O cálculo considera juros simples:
+
+```text
+Juros = Valor × 0,025 × Dias de atraso
+```
+
+### Exemplo de requisição
+
+```json
+{
+  "valor": 1000,
+  "dataVencimento": "2026-10-01"
+}
+```
+
+Considerando a data atual como `08/10/2026`, existem 7 dias de atraso.
+
+### Exemplo de resposta
+
+```json
+{
+  "valorOriginal": 1000,
+  "diasAtrasados": 7,
+  "valorJuros": 175.000,
+  "valorTotal": 1175.000
+}
+```
+
+### Regras
+
+* Vencimento anterior à data atual: calcula os juros.
+* Vencimento na data atual: não há juros.
+* Vencimento posterior à data atual: não há juros.
+* Valores monetários são tratados utilizando `decimal`.
+
+---
+
+# Arquitetura
+
+O projeto utiliza uma separação simples entre responsabilidades:
+
+```text
+HTTP Request
+     ↓
+Controller
+     ↓
+Service
+     ↓
+Regra de negócio
+     ↓
+Response
+```
+
+### Controllers
+
+Responsáveis por receber as requisições HTTP e retornar as respostas adequadas.
+
+### Services
+
+Concentram as regras de negócio de cada desafio, mantendo os Controllers mais simples.
+
+### Models
+
+Representam os dados de entrada, saída e entidades utilizadas pelas regras de negócio.
+
+### Data
+
+Contém os arquivos JSON utilizados para armazenamento dos dados dos desafios.
+
+---
+
+# Tratamento de erros
+
+Foram implementados tratamentos para situações inválidas, como:
+
+* produto inexistente;
+* quantidade de saída superior ao estoque;
+* tipo de movimentação inválido;
+* datas sem atraso para o cálculo de juros.
+
+As exceções são convertidas em respostas HTTP apropriadas pelos Controllers.
+
+---
+
+# Testes
+
+Os endpoints foram testados utilizando **Insomnia**, verificando tanto os cenários de sucesso quanto os principais cenários de erro.
+
+Foram testados, entre outros:
+
+* cálculo de comissão para diferentes faixas de valor;
+* movimentações de entrada e saída;
+* persistência das alterações de estoque;
+* tentativa de saída superior ao estoque;
+* produto inexistente;
+* tipo de movimentação inválido;
+* cálculo de juros com vencimento anterior;
+* vencimento na data atual;
+* vencimento futuro.
+
+---
+
+# Observações
+
+O projeto foi desenvolvido com foco nos requisitos apresentados no desafio técnico, priorizando uma implementação simples, organizada e compatível com as regras de negócio propostas.
